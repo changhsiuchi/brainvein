@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>大腦靜脈回流關係圖</title>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,600;1,400&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b1120;
+    --panel:#111827;
+    --line:#1e293b;
+    --deep:#38bdf8;     /* 深靜脈 sky */
+    --super:#4ade80;    /* 淺靜脈 green */
+    --sinus:#c084fc;    /* 硬腦膜竇 violet */
+    --final:#fbbf24;    /* 出口 amber */
+    --txt:#e2e8f0;
+    --txt-dim:#64748b;
+    --txt-mid:#94a3b8;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg);
+    color:var(--txt);
+    font-family:'Noto Sans TC',sans-serif;
+    min-height:100vh;
+    padding-bottom:30px;
+  }
+  header{text-align:center;padding:30px 20px 14px}
+  header h1{
+    font-family:'Newsreader',serif;font-weight:600;
+    font-size:clamp(1.4rem,4vw,2rem);letter-spacing:.02em;
+  }
+  header p{color:var(--txt-dim);font-size:.8rem;margin-top:6px;letter-spacing:.06em}
+
+  .controls{
+    display:flex;flex-wrap:wrap;gap:8px;justify-content:center;
+    padding:14px 20px;
+  }
+  .ctrl-btn{
+    background:transparent;border:1px solid var(--line);
+    color:var(--txt-mid);font-family:inherit;font-size:.8rem;
+    padding:7px 16px;border-radius:6px;cursor:pointer;
+    transition:all .18s;letter-spacing:.03em;
+  }
+  .ctrl-btn:hover{border-color:rgba(255,255,255,.25);color:var(--txt)}
+  .ctrl-btn.active{background:rgba(148,163,184,.12);border-color:rgba(148,163,184,.5);color:#fff}
+  .ctrl-btn[data-sys="deep"].active{border-color:var(--deep);color:var(--deep);background:rgba(56,189,248,.1)}
+  .ctrl-btn[data-sys="super"].active{border-color:var(--super);color:var(--super);background:rgba(74,222,128,.1)}
+  .ctrl-btn[data-sys="sinus"].active{border-color:var(--sinus);color:var(--sinus);background:rgba(192,132,252,.1)}
+
+  .diagram-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:8px 10px}
+  svg#g{display:block;margin:0 auto;max-width:820px;width:100%;overflow:visible}
+
+  .node{cursor:pointer;transition:opacity .2s}
+  .node circle{transition:filter .2s,stroke-width .2s}
+  .node:hover circle{filter:brightness(1.15)}
+  .node-l{font-weight:700;fill:#0b1120;text-anchor:middle;pointer-events:none}
+  .node-s{fill:rgba(11,17,32,.62);text-anchor:middle;pointer-events:none;font-size:8px}
+  .dim{opacity:.12}
+
+  .edge{fill:none;stroke-width:2;opacity:.55;transition:opacity .2s,stroke-width .2s}
+  .edge.hot{opacity:1;stroke-width:3}
+  .edge.dim{opacity:.06}
+
+  .band-label{font-family:'Newsreader',serif;font-style:italic;fill:var(--txt-dim);font-size:12px;letter-spacing:.04em}
+
+  /* detail panel */
+  .panel{
+    max-width:640px;margin:16px auto 0;padding:0 16px;
+  }
+  .panel-card{
+    background:var(--panel);border:1px solid var(--line);
+    border-radius:10px;padding:18px 20px;
+    opacity:0;transform:translateY(8px);transition:all .25s;
+  }
+  .panel-card.show{opacity:1;transform:none}
+  .panel-card .pc-title{font-weight:700;font-size:1.05rem;margin-bottom:2px}
+  .panel-card .pc-aka{color:var(--txt-dim);font-size:.78rem;margin-bottom:10px;font-style:italic}
+  .panel-card .pc-desc{color:var(--txt-mid);font-size:.85rem;line-height:1.7;margin-bottom:12px}
+  .flow-row{display:flex;gap:8px;font-size:.8rem;margin-bottom:5px;align-items:flex-start}
+  .flow-row .dir{color:var(--txt-dim);flex-shrink:0;width:48px}
+  .flow-row .tgt{color:var(--txt)}
+  .placeholder{color:var(--txt-dim);text-align:center;font-size:.8rem;padding:6px}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;padding:6px 20px 2px;font-size:.72rem;color:var(--txt-mid)}
+  .legend i{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>大腦靜脈回流關係圖</h1>
+  <p>Cerebral Venous Drainage · 徐淑媛老師簡報整理</p>
+</header>
+
+<div class="legend">
+  <span><i style="background:var(--deep)"></i>深靜脈 Deep</span>
+  <span><i style="background:var(--super)"></i>淺靜脈 Superficial</span>
+  <span><i style="background:var(--sinus)"></i>硬腦膜竇 Sinuses</span>
+  <span><i style="background:var(--final)"></i>出口 Outflow</span>
+</div>
+
+<div class="controls" id="controls">
+  <button class="ctrl-btn active" data-sys="all">全部 All</button>
+  <button class="ctrl-btn" data-sys="deep">深靜脈系統</button>
+  <button class="ctrl-btn" data-sys="super">淺靜脈系統</button>
+  <button class="ctrl-btn" data-sys="sinus">硬腦膜竇</button>
+</div>
+
+<div class="diagram-wrap">
+  <svg id="g" viewBox="0 0 800 980" xmlns="http://www.w3.org/2000/svg"></svg>
+</div>
+
+<div class="panel">
+  <div class="panel-card" id="panel">
+    <div class="placeholder">點擊任一節點 → 查看流向、別名與細節</div>
+  </div>
+</div>
+
+<script>
+const SYS = { deep:'#38bdf8', super:'#4ade80', sinus:'#c084fc', final:'#fbbf24' };
+
+// ---- nodes: id, x, y, r, sys, label(2 lines max via |), sub, aka, desc ----
+const NODES = [
+  // deep tributaries
+  {id:'TSV', x:90,  y:80,  r:34, sys:'deep', label:'Thalamo-|striate V.', sub:'TSV', aka:'Terminal vein', desc:'引流 thalamus、striatum；於 foramen of Monro 與 septal vein 匯合。'},
+  {id:'SV',  x:90,  y:175, r:30, sys:'deep', label:'Septal V.', sub:'', aka:'', desc:'引流 septum pellucidum 區域，與 TSV 合成 ICV。'},
+  {id:'ACV', x:90,  y:295, r:30, sys:'deep', label:'Anterior|Cerebral V.', sub:'ACV', aka:'', desc:'前腦深部引流，與 DMCV 合成 Basal Vein of Rosenthal。'},
+  {id:'DMCV',x:90,  y:390, r:32, sys:'deep', label:'Deep Middle|Cerebral V.', sub:'DMCV', aka:'', desc:'沿 lateral sulcus 深部走行，與 ACV 合成 Basal Vein。'},
+  // deep confluences
+  {id:'ICV', x:270, y:120, r:40, sys:'deep', label:'Internal|Cerebral V.', sub:'ICV', aka:'', desc:'TSV + Septal V. → ICV（成對）。兩側 ICV 再合成 Vein of Galen。'},
+  {id:'BVR', x:270, y:340, r:42, sys:'deep', label:'Basal Vein|of Rosenthal', sub:'BVR', aka:'= Basal vein', desc:'ACV + DMCV 匯合，繞 midbrain 後注入 Vein of Galen。'},
+  {id:'GAL', x:460, y:230, r:46, sys:'deep', label:'Vein of|Galen', sub:'GCV', aka:'= Great cerebral vein', desc:'兩側 ICV + 兩側 BVR 匯合形成；短而粗，注入 straight sinus。深靜脈系統總出口。'},
+  // superficial
+  {id:'SuCV',x:710, y:80,  r:34, sys:'super', label:'Superior|Cerebral Vv.', sub:'', aka:'Bridging veins', desc:'皮質背側表面靜脈，向上跨過 subdural space 注入 SSS（老人跌倒易撕裂→subdural hematoma）。'},
+  {id:'SMCV',x:710, y:190, r:36, sys:'super', label:'Superficial|Middle Cereb.', sub:'SMCV', aka:'Sylvian vein', desc:'沿 lateral sulcus 走行；注入 cavernous sinus，並藉 Trolard / Labbé 與其他系統吻合。'},
+  {id:'TRO', x:560, y:120, r:30, sys:'super', label:'Vein of|Trolard', sub:'', aka:'Superior anastomotic v.', desc:'最大的淺吻合靜脈，連接 SMCV ↔ SSS。'},
+  {id:'LAB', x:560, y:300, r:30, sys:'super', label:'Vein of|Labbé', sub:'', aka:'Inferior anastomotic v.', desc:'連接 SMCV ↔ Transverse sinus。'},
+  // sinuses
+  {id:'SSS', x:230, y:520, r:42, sys:'sinus', label:'Superior|Sagittal S.', sub:'SSS', aka:'', desc:'接收 superior cerebral veins 與 Trolard；沿中線向後注入 confluence。'},
+  {id:'ISS', x:420, y:520, r:36, sys:'sinus', label:'Inferior|Sagittal S.', sub:'ISS', aka:'', desc:'位於 falx cerebri 下緣；向後與 Vein of Galen 合成 straight sinus。'},
+  {id:'CAV', x:660, y:430, r:36, sys:'sinus', label:'Cavernous|Sinus', sub:'CS', aka:'', desc:'接收 SMCV 與 ophthalmic veins；經 SPS → TS、IPS → IJV 兩路引流。'},
+  {id:'STR', x:460, y:630, r:38, sys:'sinus', label:'Straight|Sinus', sub:'', aka:'= Sinus rectus', desc:'ISS + Vein of Galen → straight sinus → confluence。'},
+  {id:'OCC', x:250, y:660, r:30, sys:'sinus', label:'Occipital|Sinus', sub:'', aka:'', desc:'最小的硬腦膜竇，沿枕骨向上注入 confluence。'},
+  {id:'SPS', x:660, y:560, r:30, sys:'sinus', label:'Sup.|Petrosal S.', sub:'SPS', aka:'', desc:'連接 cavernous sinus → transverse / sigmoid sinus。'},
+  {id:'IPS', x:730, y:660, r:30, sys:'sinus', label:'Inf.|Petrosal S.', sub:'IPS', aka:'', desc:'連接 cavernous sinus → 直接注入 IJV。'},
+  {id:'CON', x:400, y:760, r:46, sys:'sinus', label:'Confluence|of Sinuses', sub:'Torcular Herophili', aka:'竇匯', desc:'SSS + straight sinus + occipital sinus 在枕內隆凸交匯，分流至左右 transverse sinus。'},
+  {id:'TRA', x:560, y:840, r:36, sys:'sinus', label:'Transverse|Sinus', sub:'TS', aka:'', desc:'橫向走行，接收 confluence、Labbé、SPS；延續為 sigmoid sinus。'},
+  {id:'SIG', x:650, y:910, r:32, sys:'sinus', label:'Sigmoid|Sinus', sub:'', aka:'', desc:'S 形走行，TS 延續 → IJV。'},
+  // outflow
+  {id:'IJV', x:730, y:945, r:36, sys:'final', label:'Internal|Jugular V.', sub:'IJV', aka:'', desc:'最終出口——大腦所有靜脈血最終匯入此處，出顱經 jugular foramen。'},
+];
+
+// ---- edges: from → to, sys (color) ----
+const EDGES = [
+  ['TSV','ICV','deep'], ['SV','ICV','deep'],
+  ['ACV','BVR','deep'], ['DMCV','BVR','deep'],
+  ['ICV','GAL','deep'], ['BVR','GAL','deep'],
+  ['GAL','STR','deep'],
+  ['SuCV','SSS','super'],
+  ['SMCV','TRO','super'], ['TRO','SSS','super'],
+  ['SMCV','LAB','super'], ['LAB','TRA','super'],
+  ['SMCV','CAV','super'],
+  ['ISS','STR','sinus'],
+  ['CAV','SPS','sinus'], ['CAV','IPS','sinus'],
+  ['SSS','CON','sinus'], ['STR','CON','sinus'], ['OCC','CON','sinus'],
+  ['CON','TRA','sinus'], ['SPS','TRA','sinus'],
+  ['TRA','SIG','sinus'],
+  ['SIG','IJV','sinus'], ['IPS','IJV','sinus'],
+];
+
+const NM = Object.fromEntries(NODES.map(n=>[n.id,n]));
+const svg = document.getElementById('g');
+const NS = 'http://www.w3.org/2000/svg';
+function el(t,a){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
+
+// defs: arrow markers + glow
+const defs = el('defs',{});
+for(const k in SYS){
+  const m = el('marker',{id:'ar-'+k,markerWidth:7,markerHeight:7,refX:6,refY:3,orient:'auto'});
+  m.appendChild(el('path',{d:'M0,0 L0,6 L7,3 z',fill:SYS[k]}));
+  defs.appendChild(m);
+}
+const f = el('filter',{id:'glow',x:'-40%',y:'-40%',width:'180%',height:'180%'});
+f.appendChild(el('feGaussianBlur',{stdDeviation:'2.5',result:'b'}));
+const fm=el('feMerge',{});fm.appendChild(el('feMergeNode',{in:'b'}));fm.appendChild(el('feMergeNode',{in:'SourceGraphic'}));
+f.appendChild(fm); defs.appendChild(f);
+svg.appendChild(defs);
+
+// band labels
+[['深靜脈系統 Deep Venous System',60],['淺靜脈系統 Superficial',498],['硬腦膜竇 Dural Sinuses',500]]; // placeholder
+const bandLabels = [
+  {t:'深靜脈系統 · Deep Venous System', x:40, y:42},
+  {t:'淺靜脈系統 · Superficial', x:520, y:42},
+  {t:'硬腦膜竇 · Dural Sinuses', x:40, y:478},
+];
+bandLabels.forEach(b=>{const t=el('text',{class:'band-label',x:b.x,y:b.y});t.textContent=b.t;svg.appendChild(t);});
+[ {y:54},{y:490} ].forEach(d=>svg.appendChild(el('line',{x1:30,y1:d.y,x2:770,y2:d.y,stroke:'rgba(255,255,255,.05)','stroke-width':1})));
+
+// edges layer
+const edgeLayer = el('g',{}); svg.appendChild(edgeLayer);
+const edgeEls = [];
+function trim(a,b,pad){
+  const dx=b.x-a.x, dy=b.y-a.y, d=Math.hypot(dx,dy)||1;
+  return {x1:a.x+dx/d*(a.r+2), y1:a.y+dy/d*(a.r+2), x2:b.x-dx/d*(b.r+pad), y2:b.y-dy/d*(b.r+pad)};
+}
+EDGES.forEach(([from,to,sys])=>{
+  const a=NM[from], b=NM[to]; const t=trim(a,b,8);
+  const mx=(t.x1+t.x2)/2, my=(t.y1+t.y2)/2;
+  // gentle curve: offset control point perpendicular a little
+  const dx=t.x2-t.x1, dy=t.y2-t.y1, len=Math.hypot(dx,dy)||1;
+  const off=Math.min(len*0.12,26);
+  const cx=mx - dy/len*off, cy=my + dx/len*off;
+  const p=el('path',{class:'edge',d:`M${t.x1},${t.y1} Q${cx},${cy} ${t.x2},${t.y2}`,stroke:SYS[sys],'marker-end':`url(#ar-${sys})`});
+  p.dataset.from=from; p.dataset.to=to; p.dataset.sys=sys;
+  edgeLayer.appendChild(p); edgeEls.push(p);
+});
+
+// nodes layer
+const nodeLayer = el('g',{}); svg.appendChild(nodeLayer);
+const nodeEls = {};
+NODES.forEach(n=>{
+  const g=el('g',{class:'node'}); g.dataset.id=n.id; g.dataset.sys=n.sys;
+  const c=el('circle',{cx:n.x,cy:n.y,r:n.r,fill:SYS[n.sys],stroke:'rgba(255,255,255,.18)','stroke-width':1.5,filter:'url(#glow)'});
+  g.appendChild(c);
+  const lines=n.label.split('|');
+  const startY = n.y - (lines.length-1)*6 - (n.sub?3:0);
+  lines.forEach((ln,i)=>{
+    const t=el('text',{class:'node-l',x:n.x,y:startY+i*12, 'font-size': n.r>=40?'11':'9.5'});
+    t.textContent=ln; g.appendChild(t);
+  });
+  if(n.sub){
+    const s=el('text',{class:'node-s',x:n.x,y:startY+lines.length*12-1});
+    s.textContent=n.sub; g.appendChild(s);
+  }
+  nodeLayer.appendChild(g); nodeEls[n.id]=g;
+});
+
+// interactions
+let activeFilter='all', selected=null;
+function connectedEdges(id){return edgeEls.filter(e=>e.dataset.from===id||e.dataset.to===id);}
+
+function applyFilter(){
+  edgeEls.forEach(e=>{
+    const show = activeFilter==='all' || e.dataset.sys===activeFilter;
+    e.classList.toggle('dim', !show);
+  });
+  Object.values(nodeEls).forEach(g=>{
+    if(activeFilter==='all'){g.classList.remove('dim');return;}
+    // a node is relevant if it touches any visible edge of that system OR is of that system
+    const touch = edgeEls.some(e=>(e.dataset.sys===activeFilter)&&(e.dataset.from===g.dataset.id||e.dataset.to===g.dataset.id));
+    g.classList.toggle('dim', !(g.dataset.sys===activeFilter || touch || g.dataset.id==='IJV'));
+  });
+}
+
+function hover(id,on){
+  if(activeFilter!=='all'||selected) return;
+  const conn=connectedEdges(id);
+  edgeEls.forEach(e=>{ if(conn.includes(e)) e.classList.add('hot'); else e.classList.add('dim'); });
+}
+function clearHover(){ if(selected) return; edgeEls.forEach(e=>{e.classList.remove('hot'); if(activeFilter==='all')e.classList.remove('dim');}); applyFilter(); }
+
+const panel=document.getElementById('panel');
+function showDetail(id){
+  const n=NM[id];
+  const ins=EDGES.filter(e=>e[1]===id).map(e=>NM[e[0]]);
+  const outs=EDGES.filter(e=>e[0]===id).map(e=>NM[e[1]]);
+  let h=`<div class="pc-title" style="color:${SYS[n.sys]}">${n.label.replace('|',' ')} ${n.sub?`<span style="color:var(--txt-dim);font-weight:400;font-size:.85rem">(${n.sub})</span>`:''}</div>`;
+  if(n.aka) h+=`<div class="pc-aka">${n.aka}</div>`;
+  h+=`<div class="pc-desc">${n.desc}</div>`;
+  if(ins.length) h+=`<div class="flow-row"><span class="dir">← 輸入</span><span class="tgt">${ins.map(x=>x.label.replace('|',' ')).join(' · ')}</span></div>`;
+  if(outs.length) h+=`<div class="flow-row"><span class="dir">→ 輸出</span><span class="tgt">${outs.map(x=>x.label.replace('|',' ')).join(' · ')}</span></div>`;
+  panel.innerHTML=h; panel.classList.add('show');
+}
+
+Object.entries(nodeEls).forEach(([id,g])=>{
+  g.addEventListener('mouseenter',()=>hover(id,true));
+  g.addEventListener('mouseleave',clearHover);
+  g.addEventListener('click',(ev)=>{
+    ev.stopPropagation();
+    selected=id;
+    edgeEls.forEach(e=>{const c=e.dataset.from===id||e.dataset.to===id; e.classList.toggle('hot',c); e.classList.toggle('dim',!c);});
+    Object.values(nodeEls).forEach(x=>x.classList.add('dim'));
+    g.classList.remove('dim');
+    connectedEdges(id).forEach(e=>{nodeEls[e.dataset.from].classList.remove('dim');nodeEls[e.dataset.to].classList.remove('dim');});
+    showDetail(id);
+  });
+});
+svg.addEventListener('click',()=>{selected=null;edgeEls.forEach(e=>{e.classList.remove('hot');e.classList.remove('dim');});Object.values(nodeEls).forEach(x=>x.classList.remove('dim'));applyFilter();});
+
+document.getElementById('controls').addEventListener('click',(e)=>{
+  const b=e.target.closest('.ctrl-btn'); if(!b)return;
+  document.querySelectorAll('.ctrl-btn').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active'); activeFilter=b.dataset.sys; selected=null;
+  panel.innerHTML='<div class="placeholder">點擊任一節點 → 查看流向、別名與細節</div>';panel.classList.remove('show');
+  edgeEls.forEach(x=>x.classList.remove('hot'));
+  applyFilter();
+});
+applyFilter();
+</script>
+</body>
+</html>
